@@ -314,7 +314,18 @@ export default class ObjectSchema<
     let nextFields = next.fields;
     for (let [field, schemaOrRef] of Object.entries(this.fields)) {
       const target = nextFields[field];
-      nextFields[field] = target === undefined ? schemaOrRef : target;
+      // dirty hack restoring the original "deep merge" behavior
+      // of concat for object schemas from v0 of this lib
+      // inspired by https://github.com/jquense/yup/pull/1541/files#diff-48beee939efb52513592b4eec6486a4e55244a1a990e79fdef0cacbbd45f3e02L327
+      //
+      // further context here:
+      // https://github.com/jquense/yup/issues/2009
+      // https://github.com/jquense/yup/issues/1921
+      if (target === undefined) {
+        nextFields[field] = schemaOrRef;
+      } else if ('concat' in schemaOrRef) {
+        nextFields[field] = schemaOrRef.concat(target);
+      }
     }
 
     return next.withMutation((s: any) =>
